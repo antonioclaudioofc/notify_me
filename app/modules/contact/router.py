@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 
 from app.modules.contact.service import ContactService
 from app.schemas.contact import RequestContact
 
-
 router = APIRouter(prefix="/contact", tags=["Contact"])
 
+
 @router.post("/", summary="Enviar mensagem de contato")
-async def contact(contact: RequestContact):
+def contact(background_tasks: BackgroundTasks, contact: RequestContact):
     try:
-        await ContactService.send_message(contact)
+        background_tasks.add_task(ContactService.send_message, contact)
         return {"success": True}
     except Exception:
-        raise HTTPException(status_code=500, detail="Erro ao enviar mensagem. Tente novamente mais tarde.")
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao enviar mensagem. Tente novamente mais tarde."
+        )

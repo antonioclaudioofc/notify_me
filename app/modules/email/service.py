@@ -1,24 +1,32 @@
 from email.message import EmailMessage
 import smtplib
 
-from app.schemas.contact import RequestContact
 from app.core.config import settings
 
 
-class ContactService:
+class EmailService:
 
     @staticmethod
-    def send_message(contact: RequestContact):
+    def send_verification_email(user_verification):
+        verify_url = f"{settings.FRONTEND_URL}/verify-email?token={user_verification.token}"
 
         message = EmailMessage()
-        message["Subject"] = f"Novo contato de {contact.name}"
-        message["From"] = settings.MAIL_FROM
-        message["To"] = settings.MAIL_TO
+        message["Subject"] = "Confirme seu email - Arena Manager"
+        message["From"] = settings.MAIL_FROM_EMAIL
+        message["To"] = user_verification.email
 
         message.set_content(
-            f"Nome: {contact.name}\n"
-            f"Email: {contact.email}\n\n"
-            f"Mensagem:\n{contact.message}"
+            f"""
+            Olá!
+
+            Obrigado por criar sua conta no Arena Manager.
+
+            Clique no link abaixo para validar seu email:
+
+            {verify_url}
+
+            Se você não criou essa conta, ignore este email.
+            """
         )
 
         if settings.SMTP_PORT == 465:
