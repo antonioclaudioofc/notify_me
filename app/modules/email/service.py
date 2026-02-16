@@ -8,7 +8,7 @@ class EmailService:
 
     @staticmethod
     def send_verification_email(user_verification):
-        verify_url = f"{settings.FRONTEND_URL}/verify-email?token={user_verification.token}"
+        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={user_verification.token}"
 
         message = EmailMessage()
         message["Subject"] = "Confirme seu email - Arena Manager"
