@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.modules.contact.router import router as contact_router
-from app.modules.email.router import router as email_router
+from app.modules.antonio_claudio_dev.router import router as antonio_claudio_dev_router
+from app.modules.arena_manager.router import router as arena_manager_router
 
 app = FastAPI(
     title="Notify Me API",
@@ -22,5 +22,5 @@ def home():
     return {"message": "Welcome to the Notify Me API"}
 
 
-app.include_router(contact_router)
-app.include_router(email_router)
+app.include_router(antonio_claudio_dev_router)
+app.include_router(arena_manager_router)

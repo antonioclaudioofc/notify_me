@@ -6,9 +6,9 @@ class Settings(BaseSettings):
     SMTP_PORT: int
     SMTP_USER: str
     SMTP_PASS: str
-    MAIL_FROM: str
     MAIL_TO: str
-    MAIL_FROM_EMAIL: str
+    MAIL_FROM_ANTONIOCLAUDIODEV: str
+    MAIL_FROM_ARENAMANAGER: str
     FRONTEND_URL: str
 
     class Config:
