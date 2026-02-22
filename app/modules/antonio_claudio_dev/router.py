@@ -16,7 +16,8 @@ def contact(
 ):
     try:
         background_tasks.add_task(
-            AntonioClaudioDevService.send_message(contact)
+            AntonioClaudioDevService.send_message,
+            contact
         )
         return {
             "message": "Mensagem recebida. Entrarei em contato em breve!"

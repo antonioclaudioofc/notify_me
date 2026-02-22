@@ -115,3 +115,91 @@ class ArenaManagerService:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASS)
                 server.send_message(message)
+
+    @staticmethod
+    def send_arena_owner_promotion_email(user, arena):
+        utc_zone = pytz.utc
+        sp_zone = pytz.timezone('America/Sao_Paulo')
+        utc_now = datetime.datetime.now(utc_zone)
+
+        created_at = utc_now.astimezone(sp_zone)
+
+        formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
+
+        safe_name = html.escape(user.name)
+        safe_arena = html.escape(arena.name)
+
+        message = EmailMessage()
+        message["Subject"] = "Parabéns! Você agora é dono de uma arena"
+        message["From"] = settings.MAIL_FROM_ARENAMANAGER
+        message["To"] = user.email
+
+        message.set_content(
+            f"Parabéns {user.name}! Você agora é dono da arena {arena.name}."
+        )
+
+        message.add_alternative(f"""
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family:Arial, sans-serif; background:#f4f6f8; padding:20px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                <td align="center">
+                    <table width="600" style="background:#ffffff; padding:30px; border-radius:8px;">
+
+                    <tr>
+                        <td align="center">
+                        <h2 style="color:#2563eb;">Arena Manager</h2>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                        <h3>🎉 Parabéns, {safe_name}!</h3>
+
+                        <p>
+                            Sua arena <strong>{safe_arena}</strong> foi criada com sucesso.
+                        </p>
+
+                        <p>
+                            Agora você possui acesso completo para gerenciar:
+                        </p>
+
+                        <ul>
+                            <li>Horários e reservas</li>
+                            <li>Usuários</li>
+                            <li>Pagamentos</li>
+                            <li>Relatórios</li>
+                        </ul>
+
+                        <p>
+                            Estamos felizes em ter você conosco 🚀
+                        </p>
+
+                        <p><strong>Data:</strong> {formatted_date}</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding-top:20px; color:#6b7280; font-size:12px;">
+                        © 2026 Arena Manager
+                        </td>
+                    </tr>
+
+                    </table>
+                </td>
+                </tr>
+            </table>
+            </body>
+            </html>
+            """, subtype="html")
+
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                server.send_message(message)
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.starttls()
+                server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                server.send_message(message)
