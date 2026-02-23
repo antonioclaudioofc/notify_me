@@ -203,3 +203,95 @@ class ArenaManagerService:
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASS)
                 server.send_message(message)
+
+    def send_new_court_email(user, arena, court):
+        utc_zone = pytz.utc
+        sp_zone = pytz.timezone('America/Sao_Paulo')
+        utc_now = datetime.datetime.now(utc_zone)
+
+        created_at = utc_now.astimezone(sp_zone)
+        formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
+
+        safe_name = html.escape(user.name)
+        safe_arena = html.escape(arena.name)
+        safe_court = html.escape(court.name)
+
+        message = EmailMessage()
+        message["Subject"] = f"Nova quadra adicionada na arena {arena.name}"
+        message["From"] = settings.MAIL_FROM_ARENAMANAGER
+        message["To"] = user.email
+
+        message.set_content(
+            f"Olá {user.name}, a quadra {court.name} foi criada com sucesso na arena {arena.name}."
+        )
+
+        message.add_alternative(f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family:Arial, sans-serif; background:#f4f6f8; padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+            <td align="center">
+                <table width="600" style="background:#ffffff; padding:30px; border-radius:8px;">
+
+                <tr>
+                    <td align="center">
+                    <h2 style="color:#2563eb;">Arena Manager</h2>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                    <h3>🏟️ Nova quadra criada!</h3>
+
+                    <p>
+                        Olá <strong>{safe_name}</strong>,
+                    </p>
+
+                    <p>
+                        A quadra <strong>{safe_court}</strong> foi adicionada com sucesso na sua arena 
+                        <strong>{safe_arena}</strong>.
+                    </p>
+
+                    <p>
+                        Ela já está disponível para reservas no sistema. Agora você pode:
+                    </p>
+
+                    <ul>
+                        <li>Definir horários e disponibilidade</li>
+                        <li>Configurar preços</li>
+                        <li>Gerenciar reservas</li>
+                        <li>Acompanhar o desempenho da quadra</li>
+                    </ul>
+
+                    <p>
+                        Continue gerenciando sua arena e oferecendo a melhor experiência para seus clientes 🚀
+                    </p>
+
+                    <p><strong>Data:</strong> {formatted_date}</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding-top:20px; color:#6b7280; font-size:12px;">
+                    © 2026 Arena Manager
+                    </td>
+                </tr>
+
+                </table>
+            </td>
+            </tr>
+        </table>
+        </body>
+        </html>
+        """, subtype="html")
+
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                server.send_message(message)
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.starttls()
+                server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                server.send_message(message)

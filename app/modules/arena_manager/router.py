@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 
 from app.modules.arena_manager.service import ArenaManagerService
 from app.schemas.arena import Arena
+from app.schemas.court import Court
 from app.schemas.email_verification import RequestEmailVerification
 from app.schemas.user import User
 
@@ -51,4 +52,28 @@ def owner_promotion(
         raise HTTPException(
             status_code=500,
             detail="Erro ao enviar email de promoção. Tente novamente mais tarde."
+        )
+
+
+@router.post("/new-court", status_code=status.HTTP_201_CREATED)
+def new_court(
+    background_tasks: BackgroundTasks,
+    user: User,
+    arena: Arena,
+    court: Court
+):
+    try:
+        background_tasks.add_task(
+            ArenaManagerService.send_new_court_email,
+            user,
+            arena,
+            court
+        )
+        return {
+            "message": "Email de nova quadra enviado com sucesso!"
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao enviar email de nova quadra. Tente novamente mais tarde."
         )
