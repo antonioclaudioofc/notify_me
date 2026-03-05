@@ -6,28 +6,26 @@ import datetime
 import pytz
 
 from app.core.config import settings
+from app.services.email_service import EmailService
 
 
-class ArenaManagerService:
+class ArenaManagerEmailService(EmailService):
 
-    @staticmethod
-    def send_verification_email(user_verification):
-        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={user_verification.token}"
+    def send_verification_email(self, data: dict):
+        verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={data['token']}"
 
         utc_zone = pytz.utc
         sp_zone = pytz.timezone('America/Sao_Paulo')
         utc_now = datetime.datetime.now(utc_zone)
-
         created_at = utc_now.astimezone(sp_zone)
-
         formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
 
-        safe_email = html.escape(user_verification.email)
+        safe_email = html.escape(data['email'])
 
         message = EmailMessage()
         message["Subject"] = "Confirme seu email - Arena Manager"
         message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = user_verification.email
+        message["To"] = data['email']
 
         message.set_content(
             f"Confirme seu e-mail.\n\n"
@@ -97,7 +95,6 @@ class ArenaManagerService:
                         </p>
                     </td>
                 </tr>
-
                 </table>
             </td>
             </tr>
@@ -106,36 +103,25 @@ class ArenaManagerService:
             </html>
             """, subtype="html")
 
-        if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
+        self._send_email(message)
 
-    @staticmethod
-    def send_arena_owner_promotion_email(user, arena):
+    def send_owner_promotion_email(self, user: dict, arena: dict):
         utc_zone = pytz.utc
         sp_zone = pytz.timezone('America/Sao_Paulo')
         utc_now = datetime.datetime.now(utc_zone)
-
         created_at = utc_now.astimezone(sp_zone)
-
         formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
 
-        safe_name = html.escape(user.name)
-        safe_arena = html.escape(arena.name)
+        safe_name = html.escape(user["name"])
+        safe_arena = html.escape(arena["name"])
 
         message = EmailMessage()
         message["Subject"] = "Parabéns! Você agora é dono de uma arena"
         message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = user.email
+        message["To"] = user["email"]
 
         message.set_content(
-            f"Parabéns {user.name}! Você agora é dono da arena {arena.name}."
+            f"Parabéns {safe_name}! Você agora é dono da arena {safe_arena}."
         )
 
         message.add_alternative(f"""
@@ -194,35 +180,26 @@ class ArenaManagerService:
             </html>
             """, subtype="html")
 
-        if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
+        self._send_email(message)
 
-    def send_new_court_email(user, arena, court):
+    def send_new_court_email(self, user: dict, arena: dict, court: dict):
         utc_zone = pytz.utc
         sp_zone = pytz.timezone('America/Sao_Paulo')
         utc_now = datetime.datetime.now(utc_zone)
-
         created_at = utc_now.astimezone(sp_zone)
         formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
 
-        safe_name = html.escape(user.name)
-        safe_arena = html.escape(arena.name)
-        safe_court = html.escape(court.name)
+        safe_name = html.escape(user["name"])
+        safe_arena = html.escape(arena["name"])
+        safe_court = html.escape(court["name"])
 
         message = EmailMessage()
-        message["Subject"] = f"Nova quadra adicionada na arena {arena.name}"
+        message["Subject"] = f"Nova quadra adicionada na arena {arena['name']}"
         message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = user.email
+        message["To"] = user["email"]
 
         message.set_content(
-            f"Olá {user.name}, a quadra {court.name} foi criada com sucesso na arena {arena.name}."
+            f"Olá {user['name']}, a quadra {court['name']} foi criada com sucesso na arena {arena['name']}."
         )
 
         message.add_alternative(f"""
@@ -286,6 +263,16 @@ class ArenaManagerService:
         </html>
         """, subtype="html")
 
+        self._send_email(message)
+
+    def send_reservation_created_email(self, data: dict):
+        print(f"Reservation created email not yet implemented. Data: {data}")
+
+    def send_reservation_cancelled_email(self, data: dict):
+        print(f"Reservation cancelled email not yet implemented. Data: {data}")
+
+    @staticmethod
+    def _send_email(message: EmailMessage):
         if settings.SMTP_PORT == 465:
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
                 server.login(settings.SMTP_USER, settings.SMTP_PASS)

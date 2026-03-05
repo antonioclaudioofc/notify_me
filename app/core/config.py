@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     MAIL_FROM_ANTONIOCLAUDIODEV: str
     MAIL_FROM_ARENAMANAGER: str
     FRONTEND_URL: str
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: int
+    RABBITMQ_USERNAME: str
+    RABBITMQ_PASSWORD: str
+    RABBITMQ_QUEUE: str
+    RABBITMQ_EXCHANGE: str
 
     class Config:
         env_file = ".env"
