@@ -6,7 +6,7 @@ import datetime
 import pytz
 
 from app.core.config import settings
-from app.services.email_service import EmailService
+from app.services.arena_manager.email_service import EmailService
 
 
 class ArenaManagerEmailService(EmailService):

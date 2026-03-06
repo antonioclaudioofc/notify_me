@@ -1,15 +1,24 @@
 import pika
 import json
 import threading
+from typing import Callable
 
 from app.core.config import settings
-from app.services.email_service import EmailService
 
 
 class RabbitMQConsumer:
 
-    def __init__(self, email_service: EmailService):
-        self.email_service = email_service
+    def __init__(
+        self,
+        queue_name: str,
+        exchange_name: str,
+        routing_key: str,
+        message_handler: Callable[[dict], None]
+    ):
+        self.queue_name = queue_name
+        self.exchange_name = exchange_name
+        self.routing_key = routing_key
+        self.message_handler = message_handler
         self.connection = None
         self.channel = None
         self.thread = None
@@ -24,47 +33,33 @@ class RabbitMQConsumer:
                     password=settings.RABBITMQ_PASSWORD
                 )
             )
+
             self.connection = pika.BlockingConnection(connection_parameters)
+
             self.channel = self.connection.channel()
 
             self.channel.exchange_declare(
-                exchange=settings.RABBITMQ_EXCHANGE,
+                exchange=self.exchange_name,
                 exchange_type='direct',
                 durable=True
             )
 
             self.channel.queue_declare(
-                queue=settings.RABBITMQ_QUEUE,
+                queue=self.queue_name,
                 durable=True
             )
 
             self.channel.queue_bind(
-                exchange=settings.RABBITMQ_EXCHANGE,
-                queue=settings.RABBITMQ_QUEUE,
-                routing_key='arena_manager'
+                exchange=self.exchange_name,
+                queue=self.queue_name,
+                routing_key=self.routing_key
             )
 
     def callback(self, ch, method, properties, body):
         try:
             message = json.loads(body)
             print(f"Received message: {message}")
-            message_type = message.get("type")
-            data = message.get("data")
-
-            if message_type == "verification":
-                self.email_service.send_verification_email(data)
-            elif message_type == "owner_promotion":
-                self.email_service.send_owner_promotion_email(
-                    data["user"], data["arena"])
-            elif message_type == "new_court":
-                self.email_service.send_new_court_email(
-                    data["user"], data["arena"], data["court"])
-            elif message_type == "reservation_created":
-                self.email_service.send_reservation_created_email(data)
-            elif message_type == "reservation_cancelled":
-                self.email_service.send_reservation_cancelled_email(data)
-            else:
-                print(f"Unknown message type: {message_type}")
+            self.message_handler(message)
 
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as e:
@@ -73,12 +68,15 @@ class RabbitMQConsumer:
 
     def start_consuming(self):
         self.connect()
+
         self.channel.basic_consume(
-            queue=settings.RABBITMQ_QUEUE,
+            queue=self.queue_name,
             on_message_callback=self.callback,
             auto_ack=False
         )
+
         print('Starting RabbitMQ consumer...')
+
         self.channel.start_consuming()
 
     def start_in_thread(self):
@@ -86,7 +84,9 @@ class RabbitMQConsumer:
             target=self.start_consuming,
             daemon=True
         )
+
         self.thread.start()
+
         print('Consumer started in background thread')
 
     def stop(self):
@@ -97,8 +97,3 @@ class RabbitMQConsumer:
         if self.thread:
             self.thread.join()
         print('Consumer stopped')
-
-
-def run_worker(email_service: EmailService):
-    consumer = RabbitMQConsumer(email_service)
-    consumer.start_consuming()

@@ -1,18 +1,22 @@
-import datetime 
+import datetime
 from email.message import EmailMessage
 import html
 import smtplib
+
 import pytz
 
-from app.schemas.contact import RequestContact
 from app.core.config import settings
+from app.schemas.contact import RequestContact
+from app.services.antonio_claudio_dev.email_service import EmailService
 
 
-class AntonioClaudioDevService:
+class AntonioClaudioDevEmailService(EmailService):
 
-    @staticmethod
-    def send_message(contact: RequestContact):
+    def send_message_from_payload(self, payload: dict):
+        contact = RequestContact.model_validate(payload)
+        self.send_message(contact)
 
+    def send_message(self, contact: RequestContact):
         safe_message = html.escape(contact.message)
 
         utc_zone = pytz.utc
@@ -20,7 +24,6 @@ class AntonioClaudioDevService:
         utc_now = datetime.datetime.now(utc_zone)
 
         created_at = utc_now.astimezone(sp_zone)
-
         formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
 
         message = EmailMessage()
@@ -39,30 +42,30 @@ class AntonioClaudioDevService:
         <!DOCTYPE html>
         <html>
         <head>
-        <meta charset="UTF-8">
+        <meta charset=\"UTF-8\">
         </head>
-        <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
+        <body style=\"margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;\">
+        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f4f6f8; padding:20px 0;\">
             <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0"
-                    style="background:#ffffff; border-radius:8px; padding:30px;">
+            <td align=\"center\">
+                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\"
+                    style=\"background:#ffffff; border-radius:8px; padding:30px;\">
 
                 <tr>
-                    <td align="center" style="padding-bottom:20px;">
-                    <h2 style="margin:0; color:#111827;">
-                        📩 Novo contato pelo portfólio
+                    <td align=\"center\" style=\"padding-bottom:20px;\">
+                    <h2 style=\"margin:0; color:#111827;\">
+                        Novo contato pelo portfolio
                     </h2>
                     </td>
                 </tr>
 
                 <tr>
-                    <td style="font-size:15px; color:#374151; line-height:1.6;">
+                    <td style=\"font-size:15px; color:#374151; line-height:1.6;\">
                     <p><strong>Nome:</strong> {contact.name}</p>
 
                     <p>
                         <strong>Email:</strong>
-                        <a href="mailto:{contact.email}" style="color:#2563eb; text-decoration:none;">
+                        <a href=\"mailto:{contact.email}\" style=\"color:#2563eb; text-decoration:none;\">
                         {contact.email}
                         </a>
                     </p>
@@ -72,11 +75,11 @@ class AntonioClaudioDevService:
                 </tr>
 
                 <tr>
-                    <td style="padding-top:20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0"
-                            style="background:#f9fafb; border-radius:6px; padding:20px;">
+                    <td style=\"padding-top:20px;\">
+                    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"
+                            style=\"background:#f9fafb; border-radius:6px; padding:20px;\">
                         <tr>
-                        <td style="font-size:14px; color:#374151; white-space:pre-line;">
+                        <td style=\"font-size:14px; color:#374151; white-space:pre-line;\">
                             <strong>Mensagem:</strong><br><br>
                             {safe_message}
                         </td>
@@ -86,8 +89,8 @@ class AntonioClaudioDevService:
                 </tr>
 
                 <tr>
-                    <td style="padding-top:30px; font-size:12px; color:#6b7280;">
-                    Este e-mail foi enviado automaticamente pelo formulário do seu portfólio.
+                    <td style=\"padding-top:30px; font-size:12px; color:#6b7280;\">
+                    Este e-mail foi enviado automaticamente pelo formulario do seu portfolio.
                     </td>
                 </tr>
 
@@ -99,6 +102,10 @@ class AntonioClaudioDevService:
         </html>
         """, subtype="html")
 
+        self._send_email(message)
+
+    @staticmethod
+    def _send_email(message: EmailMessage):
         if settings.SMTP_PORT == 465:
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
                 server.login(settings.SMTP_USER, settings.SMTP_PASS)

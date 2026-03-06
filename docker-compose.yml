@@ -1,11 +1,22 @@
 version: "3.8"
 
 services:
-  notify-me-worker:
+  notify-me-arena-worker:
     build: .
-    container_name: notify_me_worker
+    container_name: notify_me_arena_worker
     env_file:
       - .env
+    command: python app/workers/arena_manager_worker.py
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+
+  notify-me-portfolio-worker:
+    build: .
+    container_name: notify_me_portfolio_worker
+    env_file:
+      - .env
+    command: python app/workers/antonio_claudio_dev_worker.py
     depends_on:
       - rabbitmq
     restart: unless-stopped
