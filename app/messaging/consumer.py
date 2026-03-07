@@ -72,13 +72,19 @@ class RabbitMQConsumer:
                     auto_ack=False
                 )
 
-                print('Starting RabbitMQ consumer...')
+                print(
+                    f"Starting RabbitMQ consumer for queue '{self.queue_name}'...",
+                    flush=True,
+                )
 
                 self.channel.start_consuming()
             except Exception as e:
                 if self.should_stop:
                     break
-                print(f"RabbitMQ connection error: {e}. Retrying in 5 seconds...")
+                print(
+                    f"RabbitMQ connection error on queue '{self.queue_name}': {e}. Retrying in 5 seconds...",
+                    flush=True,
+                )
                 time.sleep(5)
             finally:
                 if self.channel and not self.channel.is_closed:
@@ -94,7 +100,10 @@ class RabbitMQConsumer:
 
         self.thread.start()
 
-        print('Consumer started in background thread')
+        print(
+            f"Consumer thread started for queue '{self.queue_name}'",
+            flush=True,
+        )
 
     def stop(self):
         self.should_stop = True
@@ -104,4 +113,4 @@ class RabbitMQConsumer:
             self.connection.close()
         if self.thread:
             self.thread.join()
-        print('Consumer stopped')
+        print(f"Consumer stopped for queue '{self.queue_name}'", flush=True)
