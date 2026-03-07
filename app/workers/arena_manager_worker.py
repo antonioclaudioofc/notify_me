@@ -25,11 +25,19 @@ def handle_arena_manager_message(message: dict):
         print(f"Unknown arena manager message type: {message_type}")
 
 
-consumer = RabbitMQConsumer(
-    queue_name=settings.RABBITMQ_ARENA_MANAGER_QUEUE,
-    exchange_name=settings.RABBITMQ_ARENA_MANAGER_EXCHANGE,
-    routing_key=settings.RABBITMQ_ARENA_MANAGER_ROUTING_KEY,
-    message_handler=handle_arena_manager_message
-)
+def build_consumer() -> RabbitMQConsumer:
+    return RabbitMQConsumer(
+        queue_name=settings.RABBITMQ_ARENA_MANAGER_QUEUE,
+        exchange_name=settings.RABBITMQ_ARENA_MANAGER_EXCHANGE,
+        routing_key=settings.RABBITMQ_ARENA_MANAGER_ROUTING_KEY,
+        message_handler=handle_arena_manager_message,
+    )
 
-consumer.start_consuming()
+
+def main():
+    consumer = build_consumer()
+    consumer.start_consuming()
+
+
+if __name__ == "__main__":
+    main()

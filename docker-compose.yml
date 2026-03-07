@@ -1,37 +1,10 @@
 version: "3.8"
 
 services:
-  notify-me-arena-worker:
+  notify-me-worker:
     build: .
-    container_name: notify_me_arena_worker
+    container_name: notify_me_worker
     env_file:
       - .env
-    command: python app/workers/arena_manager_worker.py
-    depends_on:
-      - rabbitmq
+    command: python app/workers/combined_worker.py
     restart: unless-stopped
-
-  notify-me-portfolio-worker:
-    build: .
-    container_name: notify_me_portfolio_worker
-    env_file:
-      - .env
-    command: python app/workers/antonio_claudio_dev_worker.py
-    depends_on:
-      - rabbitmq
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3.11-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    env_file:
-      - .env
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    restart: unless-stopped
-
-volumes:
-  rabbitmq_data:

@@ -16,11 +16,19 @@ def handle_antonio_claudio_dev_message(message: dict):
         print(f"Unknown antonio claudio dev message type: {message_type}")
 
 
-consumer = RabbitMQConsumer(
-    queue_name=settings.RABBITMQ_PORTFOLIO_QUEUE,
-    exchange_name=settings.RABBITMQ_PORTFOLIO_EXCHANGE,
-    routing_key=settings.RABBITMQ_PORTFOLIO_ROUTING_KEY,
-    message_handler=handle_antonio_claudio_dev_message
-)
+def build_consumer() -> RabbitMQConsumer:
+    return RabbitMQConsumer(
+        queue_name=settings.RABBITMQ_PORTFOLIO_QUEUE,
+        exchange_name=settings.RABBITMQ_PORTFOLIO_EXCHANGE,
+        routing_key=settings.RABBITMQ_PORTFOLIO_ROUTING_KEY,
+        message_handler=handle_antonio_claudio_dev_message,
+    )
 
-consumer.start_consuming()
+
+def main():
+    consumer = build_consumer()
+    consumer.start_consuming()
+
+
+if __name__ == "__main__":
+    main()

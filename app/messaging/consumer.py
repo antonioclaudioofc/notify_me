@@ -1,6 +1,7 @@
 import pika
 import json
 import threading
+import time
 from typing import Callable
 
 from app.core.config import settings
@@ -22,17 +23,11 @@ class RabbitMQConsumer:
         self.connection = None
         self.channel = None
         self.thread = None
+        self.should_stop = False
 
     def connect(self):
         if not self.connection or self.connection.is_closed:
-            connection_parameters = pika.ConnectionParameters(
-                host=settings.RABBITMQ_HOST,
-                port=settings.RABBITMQ_PORT,
-                credentials=pika.PlainCredentials(
-                    username=settings.RABBITMQ_USERNAME,
-                    password=settings.RABBITMQ_PASSWORD
-                )
-            )
+            connection_parameters = pika.URLParameters(settings.RABBITMQ_URL)
 
             self.connection = pika.BlockingConnection(connection_parameters)
 
@@ -67,17 +62,29 @@ class RabbitMQConsumer:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     def start_consuming(self):
-        self.connect()
+        while not self.should_stop:
+            try:
+                self.connect()
 
-        self.channel.basic_consume(
-            queue=self.queue_name,
-            on_message_callback=self.callback,
-            auto_ack=False
-        )
+                self.channel.basic_consume(
+                    queue=self.queue_name,
+                    on_message_callback=self.callback,
+                    auto_ack=False
+                )
 
-        print('Starting RabbitMQ consumer...')
+                print('Starting RabbitMQ consumer...')
 
-        self.channel.start_consuming()
+                self.channel.start_consuming()
+            except Exception as e:
+                if self.should_stop:
+                    break
+                print(f"RabbitMQ connection error: {e}. Retrying in 5 seconds...")
+                time.sleep(5)
+            finally:
+                if self.channel and not self.channel.is_closed:
+                    self.channel.close()
+                if self.connection and not self.connection.is_closed:
+                    self.connection.close()
 
     def start_in_thread(self):
         self.thread = threading.Thread(
@@ -90,9 +97,10 @@ class RabbitMQConsumer:
         print('Consumer started in background thread')
 
     def stop(self):
-        if self.channel:
+        self.should_stop = True
+        if self.channel and self.channel.is_open:
             self.channel.stop_consuming()
-        if self.connection:
+        if self.connection and self.connection.is_open:
             self.connection.close()
         if self.thread:
             self.thread.join()

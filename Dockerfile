@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "app/workers/arena_manager_worker.py"]
+CMD ["python", "app/workers/combined_worker.py"]
