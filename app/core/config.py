@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     RABBITMQ_PORTFOLIO_EXCHANGE: str
     RABBITMQ_PORTFOLIO_ROUTING_KEY: str
 
+    PORT: int = 10000
+
     class Config:
         env_file = ".env"
 
