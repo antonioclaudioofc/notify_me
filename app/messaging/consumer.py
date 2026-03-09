@@ -1,6 +1,7 @@
 import pika
 import json
 import threading
+import traceback
 import time
 from typing import Callable
 
@@ -25,13 +26,25 @@ class RabbitMQConsumer:
         self.thread = None
         self.should_stop = False
 
+    def _build_parameters(self) -> pika.URLParameters:
+        params = pika.URLParameters(settings.RABBITMQ_URL)
+        params.heartbeat = 30
+        params.blocked_connection_timeout = 300
+        params.connection_attempts = 3
+        params.retry_delay = 5
+        return params
+
     def connect(self):
         if not self.connection or self.connection.is_closed:
-            connection_parameters = pika.URLParameters(settings.RABBITMQ_URL)
+            print(
+                f"[{self.queue_name}] Connecting to RabbitMQ...",
+                flush=True,
+            )
 
-            self.connection = pika.BlockingConnection(connection_parameters)
-
+            self.connection = pika.BlockingConnection(self._build_parameters())
             self.channel = self.connection.channel()
+
+            self.channel.basic_qos(prefetch_count=1)
 
             self.channel.exchange_declare(
                 exchange=self.exchange_name,
@@ -50,15 +63,22 @@ class RabbitMQConsumer:
                 routing_key=self.routing_key
             )
 
+            print(
+                f"[{self.queue_name}] Connected to RabbitMQ successfully",
+                flush=True,
+            )
+
     def callback(self, ch, method, properties, body):
         try:
             message = json.loads(body)
-            print(f"Received message: {message}")
+            print(f"[{self.queue_name}] Received message: {message}", flush=True)
             self.message_handler(message)
-
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception as e:
-            print(f"Error processing message: {e}")
+            print(
+                f"[{self.queue_name}] Error processing message: {e}\n{traceback.format_exc()}",
+                flush=True,
+            )
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     def start_consuming(self):
@@ -73,7 +93,7 @@ class RabbitMQConsumer:
                 )
 
                 print(
-                    f"Starting RabbitMQ consumer for queue '{self.queue_name}'...",
+                    f"[{self.queue_name}] Waiting for messages...",
                     flush=True,
                 )
 
@@ -82,15 +102,21 @@ class RabbitMQConsumer:
                 if self.should_stop:
                     break
                 print(
-                    f"RabbitMQ connection error on queue '{self.queue_name}': {e}. Retrying in 5 seconds...",
+                    f"[{self.queue_name}] Connection error: {e}\n{traceback.format_exc()}\nRetrying in 5 seconds...",
                     flush=True,
                 )
                 time.sleep(5)
             finally:
-                if self.channel and not self.channel.is_closed:
-                    self.channel.close()
-                if self.connection and not self.connection.is_closed:
-                    self.connection.close()
+                try:
+                    if self.channel and not self.channel.is_closed:
+                        self.channel.close()
+                except Exception:
+                    pass
+                try:
+                    if self.connection and not self.connection.is_closed:
+                        self.connection.close()
+                except Exception:
+                    pass
 
     def start_in_thread(self):
         self.thread = threading.Thread(
@@ -107,10 +133,16 @@ class RabbitMQConsumer:
 
     def stop(self):
         self.should_stop = True
-        if self.channel and self.channel.is_open:
-            self.channel.stop_consuming()
-        if self.connection and self.connection.is_open:
-            self.connection.close()
+        try:
+            if self.channel and self.channel.is_open:
+                self.channel.stop_consuming()
+        except Exception:
+            pass
+        try:
+            if self.connection and self.connection.is_open:
+                self.connection.close()
+        except Exception:
+            pass
         if self.thread:
-            self.thread.join()
+            self.thread.join(timeout=10)
         print(f"Consumer stopped for queue '{self.queue_name}'", flush=True)

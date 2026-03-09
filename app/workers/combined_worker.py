@@ -34,6 +34,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    print("Building RabbitMQ consumers...", flush=True)
     arena_consumer = build_arena_consumer()
     portfolio_consumer = build_portfolio_consumer()
 
@@ -41,7 +42,7 @@ def main():
     arena_consumer.start_in_thread()
     portfolio_consumer.start_in_thread()
 
-    print("Both RabbitMQ consumers started", flush=True)
+    print("Both RabbitMQ consumers started in background threads", flush=True)
 
     port = settings.PORT
     server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
