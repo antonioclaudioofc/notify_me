@@ -8,5 +8,6 @@ pydantic-settings==2.13.1
 pydantic_core==2.41.5
 python-dotenv==1.2.2
 pytz==2026.1.post1
+resend==2.7.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0

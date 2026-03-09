@@ -1,13 +1,14 @@
-from email.message import EmailMessage
 import html
-import smtplib
 import datetime
 import traceback
 
 import pytz
+import resend
 
 from app.core.config import settings
 from app.services.arena_manager.email_service import EmailService
+
+resend.api_key = settings.RESEND_API_KEY
 
 
 class ArenaManagerEmailService(EmailService):
@@ -23,18 +24,7 @@ class ArenaManagerEmailService(EmailService):
 
         safe_email = html.escape(data['email'])
 
-        message = EmailMessage()
-        message["Subject"] = "Confirme seu email - Arena Manager"
-        message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = data['email']
-
-        message.set_content(
-            f"Confirme seu e-mail.\n\n"
-            f"Recebido em: {formatted_date}\n"
-            f"Link: {verify_url}"
-        )
-
-        message.add_alternative(f"""
+        html_content = f"""
             <!DOCTYPE html>
             <html>
             <head>
@@ -101,10 +91,13 @@ class ArenaManagerEmailService(EmailService):
             </tr>
             </table>
             </body>
-            </html>
-            """, subtype="html")
+            </html>"""
 
-        self._send_email(message)
+        self._send_email(
+            to=data['email'],
+            subject="Confirme seu email - Arena Manager",
+            html=html_content,
+        )
 
     def send_owner_promotion_email(self, user: dict, arena: dict):
         utc_zone = pytz.utc
@@ -116,16 +109,7 @@ class ArenaManagerEmailService(EmailService):
         safe_name = html.escape(user["name"])
         safe_arena = html.escape(arena["name"])
 
-        message = EmailMessage()
-        message["Subject"] = "Parabéns! Você agora é dono de uma arena"
-        message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = user["email"]
-
-        message.set_content(
-            f"Parabéns {safe_name}! Você agora é dono da arena {safe_arena}."
-        )
-
-        message.add_alternative(f"""
+        html_content = f"""
             <!DOCTYPE html>
             <html>
             <body style="font-family:Arial, sans-serif; background:#f4f6f8; padding:20px;">
@@ -178,10 +162,13 @@ class ArenaManagerEmailService(EmailService):
                 </tr>
             </table>
             </body>
-            </html>
-            """, subtype="html")
+            </html>"""
 
-        self._send_email(message)
+        self._send_email(
+            to=user["email"],
+            subject="Parabéns! Você agora é dono de uma arena",
+            html=html_content,
+        )
 
     def send_new_court_email(self, user: dict, arena: dict, court: dict):
         utc_zone = pytz.utc
@@ -194,16 +181,7 @@ class ArenaManagerEmailService(EmailService):
         safe_arena = html.escape(arena["name"])
         safe_court = html.escape(court["name"])
 
-        message = EmailMessage()
-        message["Subject"] = f"Nova quadra adicionada na arena {arena['name']}"
-        message["From"] = settings.MAIL_FROM_ARENAMANAGER
-        message["To"] = user["email"]
-
-        message.set_content(
-            f"Olá {user['name']}, a quadra {court['name']} foi criada com sucesso na arena {arena['name']}."
-        )
-
-        message.add_alternative(f"""
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <body style="font-family:Arial, sans-serif; background:#f4f6f8; padding:20px;">
@@ -261,34 +239,34 @@ class ArenaManagerEmailService(EmailService):
             </tr>
         </table>
         </body>
-        </html>
-        """, subtype="html")
+        </html>"""
 
-        self._send_email(message)
+        self._send_email(
+            to=user["email"],
+            subject=f"Nova quadra adicionada na arena {arena['name']}",
+            html=html_content,
+        )
 
     def send_reservation_created_email(self, data: dict):
-        print(f"Reservation created email not yet implemented. Data: {data}")
+        print(f"Reservation created email not yet implemented. Data: {data}", flush=True)
 
     def send_reservation_cancelled_email(self, data: dict):
-        print(f"Reservation cancelled email not yet implemented. Data: {data}")
+        print(f"Reservation cancelled email not yet implemented. Data: {data}", flush=True)
 
     @staticmethod
-    def _send_email(message: EmailMessage):
+    def _send_email(to: str, subject: str, html: str):
         try:
             print(
-                f"[ArenaManager] Sending email to {message['To']} via {settings.SMTP_HOST}:{settings.SMTP_PORT}...",
+                f"[ArenaManager] Sending email to {to} via Resend...",
                 flush=True,
             )
-            if settings.SMTP_PORT == 465:
-                with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
-                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                    server.send_message(message)
-            else:
-                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
-                    server.starttls()
-                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                    server.send_message(message)
-            print(f"[ArenaManager] Email sent successfully to {message['To']}", flush=True)
+            resend.Emails.send({
+                "from": settings.MAIL_FROM_ARENAMANAGER,
+                "to": [to],
+                "subject": subject,
+                "html": html,
+            })
+            print(f"[ArenaManager] Email sent successfully to {to}", flush=True)
         except Exception as e:
             print(
                 f"[ArenaManager] Failed to send email: {e}\n{traceback.format_exc()}",

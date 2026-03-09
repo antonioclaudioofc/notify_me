@@ -2,10 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    SMTP_HOST: str
-    SMTP_PORT: int
-    SMTP_USER: str
-    SMTP_PASS: str
+    RESEND_API_KEY: str
     MAIL_TO: str
     MAIL_FROM_ANTONIOCLAUDIODEV: str
     MAIL_FROM_ARENAMANAGER: str

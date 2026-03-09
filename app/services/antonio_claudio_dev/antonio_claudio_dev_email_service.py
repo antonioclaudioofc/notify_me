@@ -1,14 +1,15 @@
 import datetime
-from email.message import EmailMessage
 import html
-import smtplib
 import traceback
 
 import pytz
+import resend
 
 from app.core.config import settings
 from app.schemas.contact import RequestContact
 from app.services.antonio_claudio_dev.email_service import EmailService
+
+resend.api_key = settings.RESEND_API_KEY
 
 
 class AntonioClaudioDevEmailService(EmailService):
@@ -27,46 +28,34 @@ class AntonioClaudioDevEmailService(EmailService):
         created_at = utc_now.astimezone(sp_zone)
         formatted_date = created_at.strftime("%d/%m/%Y %H:%M")
 
-        message = EmailMessage()
-        message["Subject"] = f"Novo contato de {contact.name}"
-        message["From"] = settings.MAIL_FROM_ANTONIOCLAUDIODEV
-        message["To"] = settings.MAIL_TO
-
-        message.set_content(
-            f"Nome: {contact.name}\n"
-            f"Email: {contact.email}\n"
-            f"Recebido em: {formatted_date}\n\n"
-            f"Mensagem:\n{contact.message}"
-        )
-
-        message.add_alternative(f"""
+        html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-        <meta charset=\"UTF-8\">
+        <meta charset="UTF-8">
         </head>
-        <body style=\"margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;\">
-        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f4f6f8; padding:20px 0;\">
+        <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
             <tr>
-            <td align=\"center\">
-                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\"
-                    style=\"background:#ffffff; border-radius:8px; padding:30px;\">
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0"
+                    style="background:#ffffff; border-radius:8px; padding:30px;">
 
                 <tr>
-                    <td align=\"center\" style=\"padding-bottom:20px;\">
-                    <h2 style=\"margin:0; color:#111827;\">
+                    <td align="center" style="padding-bottom:20px;">
+                    <h2 style="margin:0; color:#111827;">
                         Novo contato pelo portfolio
                     </h2>
                     </td>
                 </tr>
 
                 <tr>
-                    <td style=\"font-size:15px; color:#374151; line-height:1.6;\">
+                    <td style="font-size:15px; color:#374151; line-height:1.6;">
                     <p><strong>Nome:</strong> {contact.name}</p>
 
                     <p>
                         <strong>Email:</strong>
-                        <a href=\"mailto:{contact.email}\" style=\"color:#2563eb; text-decoration:none;\">
+                        <a href="mailto:{contact.email}" style="color:#2563eb; text-decoration:none;">
                         {contact.email}
                         </a>
                     </p>
@@ -76,11 +65,11 @@ class AntonioClaudioDevEmailService(EmailService):
                 </tr>
 
                 <tr>
-                    <td style=\"padding-top:20px;\">
-                    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"
-                            style=\"background:#f9fafb; border-radius:6px; padding:20px;\">
+                    <td style="padding-top:20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0"
+                            style="background:#f9fafb; border-radius:6px; padding:20px;">
                         <tr>
-                        <td style=\"font-size:14px; color:#374151; white-space:pre-line;\">
+                        <td style="font-size:14px; color:#374151; white-space:pre-line;">
                             <strong>Mensagem:</strong><br><br>
                             {safe_message}
                         </td>
@@ -90,7 +79,7 @@ class AntonioClaudioDevEmailService(EmailService):
                 </tr>
 
                 <tr>
-                    <td style=\"padding-top:30px; font-size:12px; color:#6b7280;\">
+                    <td style="padding-top:30px; font-size:12px; color:#6b7280;">
                     Este e-mail foi enviado automaticamente pelo formulario do seu portfolio.
                     </td>
                 </tr>
@@ -100,28 +89,28 @@ class AntonioClaudioDevEmailService(EmailService):
             </tr>
         </table>
         </body>
-        </html>
-        """, subtype="html")
+        </html>"""
 
-        self._send_email(message)
+        self._send_email(
+            to=settings.MAIL_TO,
+            subject=f"Novo contato de {contact.name}",
+            html=html_content,
+        )
 
     @staticmethod
-    def _send_email(message: EmailMessage):
+    def _send_email(to: str, subject: str, html: str):
         try:
             print(
-                f"[Portfolio] Sending email to {message['To']} via {settings.SMTP_HOST}:{settings.SMTP_PORT}...",
+                f"[Portfolio] Sending email to {to} via Resend...",
                 flush=True,
             )
-            if settings.SMTP_PORT == 465:
-                with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
-                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                    server.send_message(message)
-            else:
-                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
-                    server.starttls()
-                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                    server.send_message(message)
-            print(f"[Portfolio] Email sent successfully to {message['To']}", flush=True)
+            resend.Emails.send({
+                "from": settings.MAIL_FROM_ANTONIOCLAUDIODEV,
+                "to": [to],
+                "subject": subject,
+                "html": html,
+            })
+            print(f"[Portfolio] Email sent successfully to {to}", flush=True)
         except Exception as e:
             print(
                 f"[Portfolio] Failed to send email: {e}\n{traceback.format_exc()}",
