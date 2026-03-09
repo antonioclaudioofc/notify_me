@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  notify-me-worker:
+    build: .
+    container_name: notify_me_worker
+    env_file:
+      - .env
+    command: python app/workers/combined_worker.py
+    restart: unless-stopped
