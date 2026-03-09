@@ -2,6 +2,7 @@ from email.message import EmailMessage
 import html
 import smtplib
 import datetime
+import traceback
 
 import pytz
 
@@ -273,12 +274,24 @@ class ArenaManagerEmailService(EmailService):
 
     @staticmethod
     def _send_email(message: EmailMessage):
-        if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
-        else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASS)
-                server.send_message(message)
+        try:
+            print(
+                f"[ArenaManager] Sending email to {message['To']} via {settings.SMTP_HOST}:{settings.SMTP_PORT}...",
+                flush=True,
+            )
+            if settings.SMTP_PORT == 465:
+                with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
+                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                    server.send_message(message)
+            else:
+                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30) as server:
+                    server.starttls()
+                    server.login(settings.SMTP_USER, settings.SMTP_PASS)
+                    server.send_message(message)
+            print(f"[ArenaManager] Email sent successfully to {message['To']}", flush=True)
+        except Exception as e:
+            print(
+                f"[ArenaManager] Failed to send email: {e}\n{traceback.format_exc()}",
+                flush=True,
+            )
+            raise
