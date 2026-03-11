@@ -1,14 +1,11 @@
 import html
 import datetime
-import traceback
 
 import pytz
-import resend
 
 from app.core.config import settings
+from app.core.smtp import send_email
 from app.services.arena_manager.email_service import EmailService
-
-resend.api_key = settings.RESEND_API_KEY
 
 
 class ArenaManagerEmailService(EmailService):
@@ -93,10 +90,11 @@ class ArenaManagerEmailService(EmailService):
             </body>
             </html>"""
 
-        self._send_email(
+        send_email(
             to=data['email'],
             subject="Confirme seu email - Arena Manager",
-            html=html_content,
+            html_content=html_content,
+            from_addr=settings.MAIL_FROM_ARENAMANAGER,
         )
 
     def send_owner_promotion_email(self, user: dict, arena: dict):
@@ -164,10 +162,11 @@ class ArenaManagerEmailService(EmailService):
             </body>
             </html>"""
 
-        self._send_email(
+        send_email(
             to=user["email"],
             subject="Parabéns! Você agora é dono de uma arena",
-            html=html_content,
+            html_content=html_content,
+            from_addr=settings.MAIL_FROM_ARENAMANAGER,
         )
 
     def send_new_court_email(self, user: dict, arena: dict, court: dict):
@@ -241,35 +240,19 @@ class ArenaManagerEmailService(EmailService):
         </body>
         </html>"""
 
-        self._send_email(
+        send_email(
             to=user["email"],
             subject=f"Nova quadra adicionada na arena {arena['name']}",
-            html=html_content,
+            html_content=html_content,
+            from_addr=settings.MAIL_FROM_ARENAMANAGER,
         )
 
     def send_reservation_created_email(self, data: dict):
-        print(f"Reservation created email not yet implemented. Data: {data}", flush=True)
+        print(
+            f"Reservation created email not yet implemented. Data: {data}", flush=True
+        )
 
     def send_reservation_cancelled_email(self, data: dict):
-        print(f"Reservation cancelled email not yet implemented. Data: {data}", flush=True)
-
-    @staticmethod
-    def _send_email(to: str, subject: str, html: str):
-        try:
-            print(
-                f"[ArenaManager] Sending email to {to} via Resend...",
-                flush=True,
-            )
-            resend.Emails.send({
-                "from": settings.MAIL_FROM_ARENAMANAGER,
-                "to": [to],
-                "subject": subject,
-                "html": html,
-            })
-            print(f"[ArenaManager] Email sent successfully to {to}", flush=True)
-        except Exception as e:
-            print(
-                f"[ArenaManager] Failed to send email: {e}\n{traceback.format_exc()}",
-                flush=True,
-            )
-            raise
+        print(
+            f"Reservation cancelled email not yet implemented. Data: {data}", flush=True
+        )

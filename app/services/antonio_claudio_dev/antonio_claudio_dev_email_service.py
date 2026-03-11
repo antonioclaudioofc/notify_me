@@ -1,15 +1,12 @@
 import datetime
 import html
-import traceback
 
 import pytz
-import resend
 
 from app.core.config import settings
+from app.core.smtp import send_email
 from app.schemas.contact import RequestContact
 from app.services.antonio_claudio_dev.email_service import EmailService
-
-resend.api_key = settings.RESEND_API_KEY
 
 
 class AntonioClaudioDevEmailService(EmailService):
@@ -91,29 +88,9 @@ class AntonioClaudioDevEmailService(EmailService):
         </body>
         </html>"""
 
-        self._send_email(
+        send_email(
             to=settings.MAIL_TO,
             subject=f"Novo contato de {contact.name}",
-            html=html_content,
+            html_content=html_content,
+            from_addr=settings.MAIL_FROM_ANTONIOCLAUDIODEV,
         )
-
-    @staticmethod
-    def _send_email(to: str, subject: str, html: str):
-        try:
-            print(
-                f"[Portfolio] Sending email to {to} via Resend...",
-                flush=True,
-            )
-            resend.Emails.send({
-                "from": settings.MAIL_FROM_ANTONIOCLAUDIODEV,
-                "to": [to],
-                "subject": subject,
-                "html": html,
-            })
-            print(f"[Portfolio] Email sent successfully to {to}", flush=True)
-        except Exception as e:
-            print(
-                f"[Portfolio] Failed to send email: {e}\n{traceback.format_exc()}",
-                flush=True,
-            )
-            raise

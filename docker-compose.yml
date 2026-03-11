@@ -1,10 +1,12 @@
 version: "3.8"
 
 services:
-  notify-me-worker:
+  notify-me-api:
     build: .
-    container_name: notify_me_worker
+    container_name: notify_me_api
     env_file:
       - .env
-    command: python app/workers/combined_worker.py
+    ports:
+      - "${PORT:-10000}:10000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 10000
     restart: unless-stopped
